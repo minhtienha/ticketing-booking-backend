@@ -11,9 +11,5 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": [],
-  "references": [
-    {
-      "path": "../auth-service/tsconfig.app.json"
-    }
-  ]
+  "references": []
 }

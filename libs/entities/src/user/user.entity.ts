@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { Auth } from '@ticketing/entities';
 import { DefaultEntity } from '../common/default.entity';
 
 export enum UserRole {
@@ -14,8 +13,8 @@ export enum UserStatus {
 
 @Entity('users')
 export class User extends DefaultEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @Column()
   email!: string;

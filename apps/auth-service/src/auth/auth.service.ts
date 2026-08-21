@@ -71,7 +71,7 @@ export class AuthService implements OnModuleInit {
     return await this.generateTokens(user.id, user.email);
   }
 
-  private async generateTokens(userId: number, email: string) {
+  private async generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload, {

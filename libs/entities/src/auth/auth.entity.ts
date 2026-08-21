@@ -11,8 +11,8 @@ import { DefaultEntity } from '../common/default.entity'; // Nếu bạn muốn 
 
 @Entity('auth')
 export class Auth extends DefaultEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @Column({ type: 'text' })
   token!: string;
