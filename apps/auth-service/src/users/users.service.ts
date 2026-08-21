@@ -5,7 +5,7 @@ import { User } from '@ticketing/entities';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class AppService {
+export class UsersService {
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,
   ) {}

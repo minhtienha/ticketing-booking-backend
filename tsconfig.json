@@ -29,9 +29,6 @@
     },
     {
       "path": "./libs/entities"
-    },
-    {
-      "path": "./apps/user-service"
     }
   ],
   "compilerOptions": {}

@@ -16,7 +16,7 @@ import { UsersService } from '../interface/face.service';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class AppService implements OnModuleInit {
+export class AuthService implements OnModuleInit {
   private usersServiceRpc!: UsersService;
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,

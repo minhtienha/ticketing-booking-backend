@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { CommonModule } from '@ticketing/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User, Auth } from '@ticketing/entities';
@@ -23,7 +23,8 @@ import * as path from 'path';
       },
     ]),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AuthController],
+  providers: [AuthService],
+  exports: [AuthService],
 })
-export class AppModule {}
+export class AuthModule {}
