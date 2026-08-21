@@ -1,0 +1,38 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/api-gateway"
+    },
+    {
+      "path": "./apps/auth-service"
+    },
+    {
+      "path": "./apps/event-service"
+    },
+    {
+      "path": "./apps/booking-service"
+    },
+    {
+      "path": "./apps/order-service"
+    },
+    {
+      "path": "./apps/payment-service"
+    },
+    {
+      "path": "./apps/notification-service"
+    },
+    {
+      "path": "./libs/common"
+    },
+    {
+      "path": "./libs/entities"
+    },
+    {
+      "path": "./apps/user-service"
+    }
+  ],
+  "compilerOptions": {}
+}

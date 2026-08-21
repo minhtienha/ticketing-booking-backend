@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+  postgreSQL:
+    image: ''
+    entrypoint:
+      -
+      -
+      -
+      -
+    ports:
+      -
+    volumes:
+      -
+volumes:
+  postgreSQL_data:
