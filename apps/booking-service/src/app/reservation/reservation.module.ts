@@ -16,11 +16,11 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     TypeOrmModule.forFeature([Reservation, TicketTier, Event]),
     ClientsModule.register([
       {
-        name: 'RESERVATION_SERVICE',
+        name: 'ORDER_SERVICE_CLIENT',
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://localhost:5672'],
-          queue: 'reservation_queue',
+          queue: 'order_queue',
           queueOptions: {
             durable: true,
           },

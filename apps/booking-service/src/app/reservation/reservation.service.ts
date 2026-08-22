@@ -1,4 +1,10 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Inject,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import {
   Reservation,
   TicketTier,
@@ -10,10 +16,12 @@ import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ReservationService {
+  private readonly logger = new Logger(ReservationService.name);
+
   constructor(
     private readonly dataSource: DataSource,
-    @Inject('RESERVATION_SERVICE')
-    private readonly reservationClient: ClientProxy,
+    @Inject('ORDER_SERVICE_CLIENT')
+    private readonly orderClient: ClientProxy,
   ) {}
 
   async makeReservation(data: {
@@ -59,7 +67,7 @@ export class ReservationService {
 
       const totalAmount = ticketTier.price * data.quantity;
 
-      await this.reservationClient.emit('reservation.created', {
+      await this.orderClient.emit('reservation.created', {
         userId: savedReservation.userId,
         reservationId: savedReservation.id,
         totalAmount: totalAmount,
@@ -70,9 +78,33 @@ export class ReservationService {
     });
   }
 
+  async confirmReservation(reservationId: string): Promise<Reservation> {
+    return await this.dataSource.transaction(async (manager) => {
+      const reservation = await manager.findOne(Reservation, {
+        where: { id: reservationId },
+      });
+
+      if (!reservation) {
+        throw new NotFoundException(
+          `Không tìm thấy Reservation ID: ${reservationId}`,
+        );
+      }
+
+      if (reservation.status === ReservationStatus.CONFIRMED) {
+        this.logger.warn(`Giữ chỗ ${reservationId} đã được xác nhận trước đó.`);
+        return reservation;
+      }
+
+      reservation.status = ReservationStatus.CONFIRMED;
+      const updatedReservation = await manager.save(reservation);
+
+      this.logger.log(`Hoàn tất chốt vé cho Reservation: ${reservationId}`);
+      return updatedReservation;
+    });
+  }
+
   async cancelReservation(reservationId: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
-      // 1. Cập nhật trạng thái chỉ khi đơn đang là PENDING (tránh cancel 2 lần)
       const updateResult = await manager
         .createQueryBuilder()
         .update(Reservation)
@@ -89,7 +121,7 @@ export class ReservationService {
         );
       }
 
-      // 2. Lấy thông tin để hoàn vé
+      // Lấy thông tin để hoàn vé
       const reservation = await manager.findOne(Reservation, {
         where: { id: reservationId },
       });
@@ -111,7 +143,6 @@ export class ReservationService {
   @Cron(CronExpression.EVERY_30_SECONDS)
   async handleExpiredReservations() {
     await this.dataSource.transaction(async (manager) => {
-      // 1. Lấy danh sách các đơn giữ chỗ đã hết hạn
       const expiredReservations = await manager.find(Reservation, {
         where: {
           status: ReservationStatus.PENDING,
@@ -142,6 +173,10 @@ export class ReservationService {
             })
             .where('id = :id', { id: reservation.ticketTierId })
             .execute();
+
+          this.orderClient.emit('reservation.expired', {
+            reservationId: reservation.id,
+          });
         }
       }
     });
