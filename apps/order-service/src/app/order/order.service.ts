@@ -8,7 +8,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { Order, OrderItem, PaymentStatus } from '@ticketing/entities';
+import {
+  Order,
+  OrderItem,
+  PaymentStatus,
+  TicketStatus,
+} from '@ticketing/entities';
+import { TicketService } from '../ticket/ticket.service';
 
 @Injectable()
 export class OrderService {
@@ -19,6 +25,7 @@ export class OrderService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
+    private readonly ticketService: TicketService,
     @Inject('RESERVATION_SERVICE_CLIENT')
     private readonly orderClient: ClientProxy,
     private readonly dataSource: DataSource,
@@ -98,6 +105,11 @@ export class OrderService {
     this.logger.log(`Đã cập nhật trạng thái đơn ${orderId} thành ${status}`);
 
     if (status === PaymentStatus.SUCCESS) {
+      await this.ticketService.createTickets({
+        orderId: updatedOrder.id,
+        status: TicketStatus.VALID,
+      });
+
       this.orderClient.emit('order.payment_success', {
         reservationId: updatedOrder.reservationId,
       });
