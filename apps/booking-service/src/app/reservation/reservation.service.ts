@@ -72,6 +72,10 @@ export class ReservationService {
         reservationId: savedReservation.id,
         totalAmount: totalAmount,
         idempotencyKey: `order_res_${savedReservation.id}`,
+        ticketTierId: savedReservation.ticketTierId,
+        quantity: savedReservation.quantity,
+        unitPrice: ticketTier.price,
+        totalPrice: totalAmount,
       });
 
       return savedReservation;

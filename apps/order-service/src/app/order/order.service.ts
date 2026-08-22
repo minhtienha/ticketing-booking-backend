@@ -6,9 +6,9 @@ import {
   Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { Order, PaymentStatus } from '@ticketing/entities';
+import { Order, OrderItem, PaymentStatus } from '@ticketing/entities';
 
 @Injectable()
 export class OrderService {
@@ -17,9 +17,11 @@ export class OrderService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
-
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepository: Repository<OrderItem>,
     @Inject('RESERVATION_SERVICE_CLIENT')
     private readonly orderClient: ClientProxy,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createOrder(data: {
@@ -27,20 +29,36 @@ export class OrderService {
     reservationId: string;
     totalAmount: number;
     idempotencyKey: string;
+    ticketTierId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
   }): Promise<Order> {
     try {
-      const newOrder = this.orderRepository.create({
-        userId: data.userId,
-        reservationId: data.reservationId,
-        totalAmount: data.totalAmount,
-        idempotencyKey: data.idempotencyKey,
-        paymentStatus: PaymentStatus.PENDING,
+      return await this.dataSource.transaction(async (manager) => {
+        const newOrder = manager.create(Order, {
+          userId: data.userId,
+          reservationId: data.reservationId,
+          totalAmount: data.totalAmount,
+          idempotencyKey: data.idempotencyKey,
+          paymentStatus: PaymentStatus.PENDING,
+        });
+
+        const savedOrder = await manager.save(newOrder);
+        this.logger.log(`Tạo đơn hàng thành công: ${savedOrder.id}`);
+
+        const orderItem = manager.create(OrderItem, {
+          orderId: savedOrder.id,
+          ticketTierId: data.ticketTierId,
+          quantity: data.quantity,
+          unitPrice: data.unitPrice,
+          subtotal: data.totalPrice,
+        });
+        await manager.save(orderItem);
+        this.logger.log(`Tạo chi tiết đơn hàng thành công: ${orderItem.id}`);
+
+        return savedOrder;
       });
-
-      const savedOrder = await this.orderRepository.save(newOrder);
-      this.logger.log(`Tạo đơn hàng thành công: ${savedOrder.id}`);
-
-      return savedOrder;
     } catch (error: any) {
       if (error.code === '23505') {
         this.logger.warn(

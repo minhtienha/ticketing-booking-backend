@@ -17,6 +17,10 @@ export class OrderController {
       reservationId: string;
       totalAmount: number;
       idempotencyKey: string;
+      ticketTierId: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
     },
   ) {
     this.logger.log(
@@ -28,6 +32,10 @@ export class OrderController {
       reservationId: data.reservationId,
       totalAmount: data.totalAmount,
       idempotencyKey: data.idempotencyKey,
+      ticketTierId: data.ticketTierId,
+      quantity: data.quantity,
+      unitPrice: data.unitPrice,
+      totalPrice: data.totalPrice,
     });
   }
 
