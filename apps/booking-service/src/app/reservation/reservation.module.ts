@@ -8,11 +8,25 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Reservation, TicketTier, Event } from '@ticketing/entities';
 import { ReservationController } from './reservation.controller';
 import { ReservationService } from './reservation.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
     CommonModule,
     TypeOrmModule.forFeature([Reservation, TicketTier, Event]),
+    ClientsModule.register([
+      {
+        name: 'RESERVATION_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://localhost:5672'],
+          queue: 'reservation_queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+    ]),
   ],
   controllers: [ReservationController],
   providers: [ReservationService],

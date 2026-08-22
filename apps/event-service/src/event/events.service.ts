@@ -20,18 +20,18 @@ export class EventsService {
     const skip = (page - 1) * limit;
 
     const qb = this.eventRepository
-      .createQueryBuilder('event')
-      .orderBy('event.startTime', 'DESC')
-      .addOrderBy('event.id', 'DESC');
+      .createQueryBuilder('events')
+      .orderBy('events.startTime', 'DESC')
+      .addOrderBy('events.id', 'DESC');
 
     if (query.search?.trim()) {
-      qb.andWhere('event.name ILIKE :search', {
+      qb.andWhere('events.name ILIKE :search', {
         search: `%${query.search.trim()}%`,
       });
     }
 
     if (query.status) {
-      qb.andWhere('event.status = :status', { status: query.status });
+      qb.andWhere('events.status = :status', { status: query.status });
     }
 
     qb.skip(skip).take(limit);

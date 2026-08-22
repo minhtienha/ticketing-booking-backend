@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import {
   Reservation,
   TicketTier,
@@ -6,10 +6,15 @@ import {
 } from '@ticketing/entities';
 import { DataSource, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ReservationService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    @Inject('RESERVATION_SERVICE')
+    private readonly reservationClient: ClientProxy,
+  ) {}
 
   async makeReservation(data: {
     userId: string;
@@ -18,7 +23,14 @@ export class ReservationService {
     quantity: number;
   }): Promise<Reservation> {
     return await this.dataSource.transaction(async (manager) => {
-      // 1. Trừ vé trực tiếp bằng SQL có điều kiện (chống Race Condition tuyệt đối)
+      const ticketTier = await manager.findOne(TicketTier, {
+        where: { id: data.ticketTierId },
+      });
+
+      if (!ticketTier) {
+        throw new BadRequestException('Hạng vé không tồn tại');
+      }
+
       const updateResult = await manager
         .createQueryBuilder()
         .update(TicketTier)
@@ -31,21 +43,30 @@ export class ReservationService {
         })
         .execute();
 
-      // Nếu affected === 0 nghĩa là vé không tồn tại hoặc không đủ số lượng
       if (updateResult.affected === 0) {
         throw new BadRequestException(
           'Hạng vé đã hết hoặc không đủ số lượng yêu cầu',
         );
       }
 
-      // 2. Tạo đơn giữ chỗ
       const reservation = manager.create(Reservation, {
         ...data,
         status: ReservationStatus.PENDING,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 phút
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       });
 
-      return await manager.save(reservation);
+      const savedReservation = await manager.save(reservation);
+
+      const totalAmount = ticketTier.price * data.quantity;
+
+      await this.reservationClient.emit('reservation.created', {
+        userId: savedReservation.userId,
+        reservationId: savedReservation.id,
+        totalAmount: totalAmount,
+        idempotencyKey: `order_res_${savedReservation.id}`,
+      });
+
+      return savedReservation;
     });
   }
 
