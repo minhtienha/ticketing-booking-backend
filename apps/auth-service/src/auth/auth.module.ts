@@ -6,11 +6,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User, Auth } from '@ticketing/entities';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import * as path from 'path';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     CommonModule,
     TypeOrmModule.forFeature([User, Auth]),
+    UsersModule,
     ClientsModule.register([
       {
         name: 'USERS_PACKAGE',

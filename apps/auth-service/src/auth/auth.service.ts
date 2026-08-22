@@ -1,43 +1,23 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleInit,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { User, Auth, UserStatus } from '@ticketing/entities';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import type { ClientGrpc } from '@nestjs/microservices';
-import { UsersService } from '../interface/face.service';
-import { firstValueFrom } from 'rxjs';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
-export class AuthService implements OnModuleInit {
-  private usersServiceRpc!: UsersService;
+export class AuthService {
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,
     @InjectRepository(Auth) private authRepository: Repository<Auth>,
-    @Inject('USERS_PACKAGE')
-    private client: ClientGrpc,
     private jwtService: JwtService,
+    private readonly usersService: UsersService,
   ) {}
 
-  onModuleInit() {
-    this.usersServiceRpc = this.client.getService<UsersService>('UsersService');
-  }
-
   async register(data: { email: string; password: string }) {
-    try {
-      const registerUser = this.usersServiceRpc.CreateUser(data);
-      return await firstValueFrom<User>(registerUser);
-    } catch (e: any) {
-      Logger.error(e.message ?? e);
-      throw new UnauthorizedException('Đăng ký thất bại');
-    }
+    return await this.usersService.create(data);
   }
 
   private async hashPassword(password: string): Promise<string> {
