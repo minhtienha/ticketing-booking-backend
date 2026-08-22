@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { CreateTicketTierDto, UpdateTicketTierDto } from '@ticketing/entities';
 import { TicketTiersService } from './ticket-tiers.service';
 
 @Controller('ticket-tiers')
@@ -18,15 +19,7 @@ export class TicketTiersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body()
-    dto: {
-      eventId: string;
-      name: string;
-      price: number;
-      totalQuantity: number;
-    },
-  ) {
+  async create(@Body() dto: CreateTicketTierDto) {
     return await this.ticketTiersService.create(dto);
   }
 
@@ -43,13 +36,7 @@ export class TicketTiersController {
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body()
-    dto: {
-      eventId?: string;
-      name?: string;
-      price?: number;
-      totalQuantity?: number;
-    },
+    @Body() dto: UpdateTicketTierDto,
   ) {
     return await this.ticketTiersService.update(id, dto);
   }

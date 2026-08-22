@@ -2,7 +2,12 @@ import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { Payment, PaymentTransactionStatus } from '@ticketing/entities';
+import {
+  Payment,
+  PaymentTransactionStatus,
+  CreatePaymentIntentDto,
+  VnPayQueryDto,
+} from '@ticketing/entities';
 import { VNPay } from 'vnpay/vnpay';
 import { HashAlgorithm, ProductCode, VnpLocale } from 'vnpay/enums';
 import { VerifyIpnCall } from 'vnpay/types-only';
@@ -30,11 +35,9 @@ export class PaymentService {
     });
   }
 
-  async createPaymentIntent(data: {
-    orderId: string;
-    amount: number;
-    idempotencyKey: string;
-  }): Promise<{ paymentId: string; paymentUrl: string }> {
+  async createPaymentIntent(
+    data: CreatePaymentIntentDto,
+  ): Promise<{ paymentId: string; paymentUrl: string }> {
     const providerTxnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     const now = new Date();
@@ -73,7 +76,7 @@ export class PaymentService {
     };
   }
 
-  async handleWebhook(query: any): Promise<void> {
+  async handleWebhook(query: VnPayQueryDto): Promise<void> {
     const verify: VerifyIpnCall = this.vnpay.verifyIpnCall(query);
 
     if (!verify.isVerified) {

@@ -1,6 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Event } from '@ticketing/entities';
+import {
+  Event,
+  CreateEventDto,
+  UpdateEventDto,
+  ListEventsQueryDto,
+} from '@ticketing/entities';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -9,12 +14,7 @@ export class EventsService {
     @InjectRepository(Event) private eventRepository: Repository<Event>,
   ) {}
 
-  async getAllEvents(query: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: string;
-  }) {
+  async getAllEvents(query: ListEventsQueryDto) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
     const skip = (page - 1) * limit;
@@ -130,13 +130,7 @@ export class EventsService {
     return event;
   }
 
-  async createEvent(data: {
-    name: string;
-    description?: string;
-    startTime: Date;
-    endTime: Date;
-    status?: string;
-  }): Promise<Event> {
+  async createEvent(data: CreateEventDto): Promise<Event> {
     if (new Date(data.startTime) >= new Date(data.endTime)) {
       throw new HttpException(
         'Thời gian kết thúc phải diễn ra sau thời gian bắt đầu',
@@ -148,16 +142,7 @@ export class EventsService {
     return await this.eventRepository.save(newEvent);
   }
 
-  async updateEvent(
-    id: string,
-    data: {
-      name: string;
-      description?: string;
-      startTime: Date;
-      endTime: Date;
-      status?: string;
-    },
-  ): Promise<Event> {
+  async updateEvent(id: string, data: UpdateEventDto): Promise<Event> {
     const event = await this.getEventById(id);
 
     const startTime = data.startTime

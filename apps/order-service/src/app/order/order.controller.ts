@@ -1,7 +1,12 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { OrderService } from './order.service';
-import { PaymentStatus } from '@ticketing/entities';
+import {
+  PaymentStatus,
+  ReservationCreatedEventDto,
+  PaymentStatusEventDto,
+  ReservationExpiredEventDto,
+} from '@ticketing/entities';
 
 @Controller()
 export class OrderController {
@@ -10,19 +15,7 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @EventPattern('reservation.created')
-  async handleReservationCreated(
-    @Payload()
-    data: {
-      userId: string;
-      reservationId: string;
-      totalAmount: number;
-      idempotencyKey: string;
-      ticketTierId: string;
-      quantity: number;
-      unitPrice: number;
-      totalPrice: number;
-    },
-  ) {
+  async handleReservationCreated(@Payload() data: ReservationCreatedEventDto) {
     this.logger.log(
       `Nhận sự kiện tạo đơn hàng từ Reservation: ${data.reservationId}`,
     );
@@ -40,7 +33,7 @@ export class OrderController {
   }
 
   @EventPattern('payment.succeeded')
-  async handlePaymentSucceeded(@Payload() data: { orderId: string }) {
+  async handlePaymentSucceeded(@Payload() data: PaymentStatusEventDto) {
     this.logger.log(
       `Nhận event [payment.succeeded] cho đơn hàng: ${data.orderId}`,
     );
@@ -52,7 +45,7 @@ export class OrderController {
   }
 
   @EventPattern('payment.failed')
-  async handlePaymentFailed(@Payload() data: { orderId: string }) {
+  async handlePaymentFailed(@Payload() data: PaymentStatusEventDto) {
     this.logger.log(
       `Nhận event [payment.failed] cho đơn hàng: ${data.orderId}`,
     );
@@ -64,7 +57,7 @@ export class OrderController {
   }
 
   @EventPattern('reservation.expired')
-  async handleReservationExpired(@Payload() data: { reservationId: string }) {
+  async handleReservationExpired(@Payload() data: ReservationExpiredEventDto) {
     await this.orderService.cancelExpiredOrder(data.reservationId);
   }
 }

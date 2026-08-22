@@ -13,6 +13,7 @@ import {
   OrderItem,
   PaymentStatus,
   TicketStatus,
+  CreateOrderDto,
 } from '@ticketing/entities';
 import { TicketService } from '../ticket/ticket.service';
 
@@ -31,16 +32,7 @@ export class OrderService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async createOrder(data: {
-    userId: string;
-    reservationId: string;
-    totalAmount: number;
-    idempotencyKey: string;
-    ticketTierId: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }): Promise<Order> {
+  async createOrder(data: CreateOrderDto): Promise<Order> {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const newOrder = manager.create(Order, {
@@ -66,8 +58,13 @@ export class OrderService {
 
         return savedOrder;
       });
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error: unknown) {
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: string }).code)
+          : undefined;
+
+      if (code === '23505') {
         this.logger.warn(
           `Idempotency hit: Cố gắng tạo lại đơn hàng với key ${data.idempotencyKey}`,
         );

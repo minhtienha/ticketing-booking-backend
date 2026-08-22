@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TicketTier, Event } from '@ticketing/entities';
+import {
+  TicketTier,
+  Event,
+  CreateTicketTierDto,
+  UpdateTicketTierDto,
+} from '@ticketing/entities';
 
 @Injectable()
 export class TicketTiersService {
@@ -17,12 +22,7 @@ export class TicketTiersService {
     private readonly eventRepository: Repository<Event>,
   ) {}
 
-  async create(dto: {
-    eventId: string;
-    name: string;
-    price: number;
-    totalQuantity: number;
-  }): Promise<TicketTier> {
+  async create(dto: CreateTicketTierDto): Promise<TicketTier> {
     const event = await this.eventRepository.findOne({
       where: { id: dto.eventId },
     });
@@ -61,15 +61,7 @@ export class TicketTiersService {
     return tier;
   }
 
-  async update(
-    id: string,
-    dto: {
-      eventId?: string;
-      name?: string;
-      price?: number;
-      totalQuantity?: number;
-    },
-  ): Promise<TicketTier> {
+  async update(id: string, dto: UpdateTicketTierDto): Promise<TicketTier> {
     const tier = await this.findOne(id);
 
     if (dto.totalQuantity !== undefined) {

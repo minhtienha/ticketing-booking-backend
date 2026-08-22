@@ -2,7 +2,13 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { User, Auth, UserStatus } from '@ticketing/entities';
+import {
+  User,
+  Auth,
+  UserStatus,
+  LoginAuthDto,
+  RegisterAuthDto,
+} from '@ticketing/entities';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
@@ -16,7 +22,7 @@ export class AuthService {
     private readonly usersService: UsersService,
   ) {}
 
-  async register(data: { email: string; password: string }) {
+  async register(data: RegisterAuthDto) {
     return await this.usersService.create(data);
   }
 
@@ -24,7 +30,7 @@ export class AuthService {
     return await bcrypt.hash(password, 10);
   }
 
-  async login(data: { email: string; password: string }) {
+  async login(data: LoginAuthDto) {
     const user = await this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')

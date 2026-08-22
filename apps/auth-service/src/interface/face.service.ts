@@ -1,6 +1,6 @@
-import { User } from '@ticketing/entities';
+import { CreateUserDto, User } from '@ticketing/entities';
 import { Observable } from 'rxjs';
 
 export interface UsersService {
-  CreateUser(data: { email: string; password: string }): Observable<User>;
+  CreateUser(data: CreateUserDto): Observable<User>;
 }

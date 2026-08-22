@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ticket, TicketStatus, OrderItem } from '@ticketing/entities';
 
+interface CreateTicketsInput {
+  orderId: string;
+  status: TicketStatus;
+}
+
 @Injectable()
 export class TicketService {
   private readonly logger = new Logger(TicketService.name);
@@ -14,7 +19,7 @@ export class TicketService {
     private readonly orderItemRepository: Repository<OrderItem>,
   ) {}
 
-  async createTickets(data: { orderId: string; status: TicketStatus }) {
+  async createTickets(data: CreateTicketsInput) {
     const existingTicketsCount = await this.ticketRepository.count({
       where: { orderId: data.orderId },
     });

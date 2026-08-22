@@ -1,4 +1,5 @@
 export * from './auth/auth.entity';
+export * from './dto';
 export * from './event/index';
 export * from './ticket_tier/index';
 export * from './order/index';

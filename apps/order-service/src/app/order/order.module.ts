@@ -7,13 +7,14 @@ import { CommonModule } from '@ticketing/common';
 import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Order } from '@ticketing/entities';
+import { Order, OrderItem, Ticket, TicketTier } from '@ticketing/entities';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TicketModule } from '../ticket/ticket.module';
 
 @Module({
   imports: [
     CommonModule,
-    TypeOrmModule.forFeature([Order]),
+    TypeOrmModule.forFeature([Order, OrderItem, Ticket, TicketTier, Event]),
     ClientsModule.register([
       {
         name: 'RESERVATION_SERVICE_CLIENT',
@@ -27,6 +28,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         },
       },
     ]),
+    TicketModule,
   ],
   controllers: [OrderController],
   providers: [OrderService],

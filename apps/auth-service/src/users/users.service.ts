@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '@ticketing/entities';
+import { User, CreateUserDto } from '@ticketing/entities';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,
   ) {}
-  async create(data: any) {
+  async create(data: CreateUserDto) {
     const existing = await this.usersRepository.findOneBy({
       email: data.email,
     });

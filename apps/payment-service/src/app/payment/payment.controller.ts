@@ -7,6 +7,7 @@ import {
   Get,
   Query,
 } from '@nestjs/common';
+import { CreatePaymentIntentDto, VnPayQueryDto } from '@ticketing/entities';
 import { PaymentService } from './payment.service';
 
 @Controller('payments')
@@ -14,26 +15,19 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post('create-intent')
-  async createPaymentIntent(
-    @Body()
-    dto: {
-      orderId: string;
-      amount: number;
-      idempotencyKey: string;
-    },
-  ) {
+  async createPaymentIntent(@Body() dto: CreatePaymentIntentDto) {
     return await this.paymentService.createPaymentIntent(dto);
   }
 
   @Get('webhook')
   @HttpCode(HttpStatus.OK)
-  async handleWebhook(@Query() query: any) {
+  async handleWebhook(@Query() query: VnPayQueryDto) {
     await this.paymentService.handleWebhook(query);
     return { RspCode: '00', Message: 'Confirm Success' };
   }
 
   @Get('vnpay-return')
-  async handleReturnUrl(@Query() query: any) {
+  async handleReturnUrl(@Query() query: VnPayQueryDto) {
     const isSuccess = query.vnp_ResponseCode === '00';
 
     return {
