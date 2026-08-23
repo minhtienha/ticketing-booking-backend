@@ -1,16 +1,143 @@
-version: '3.7'
-
 services:
-  postgreSQL:
-    image: ''
-    entrypoint:
-      -
-      -
-      -
-      -
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: '123'
+      POSTGRES_DB: pb19
     ports:
-      -
+      - '5432:5432'
     volumes:
-      -
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d pb19']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [ticketing]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [ticketing]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ticketing
+      RABBITMQ_DEFAULT_PASS: ticketing
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [ticketing]
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: auth-service
+    env_file:
+      - ../.env
+    environment: &service-env
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_NAME: ${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      VNP_TMN_CODE: ${VNP_TMN_CODE}
+      VNP_SECURE_SECRET: ${VNP_SECURE_SECRET}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports:
+      - '3000:3000'
+    networks: [ticketing]
+
+  event-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: event-service
+    environment:
+      <<: *service-env
+      PORT: 3002
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - '3002:3002'
+    networks: [ticketing]
+
+  booking-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: booking-service
+    environment:
+      <<: *service-env
+      PORT: 3003
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports:
+      - '3003:3003'
+    networks: [ticketing]
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: order-service
+    environment:
+      <<: *service-env
+      PORT: 3004
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports:
+      - '3004:3004'
+    networks: [ticketing]
+
+  payment-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: payment-service
+    environment:
+      <<: *service-env
+      PORT: 3005
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports:
+      - '3005:3005'
+    networks: [ticketing]
+
 volumes:
-  postgreSQL_data:
+  postgres_data:
+
+networks:
+  ticketing:
+    driver: bridge
