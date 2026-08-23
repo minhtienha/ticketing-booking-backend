@@ -9,7 +9,7 @@ import {
   Reservation,
   TicketTier,
   ReservationStatus,
-  CreateReservationDto,
+  CreateReservationCommandDto,
 } from '@ticketing/entities';
 import { DataSource, LessThan, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -28,7 +28,9 @@ export class ReservationService {
     private readonly reservationRepository: Repository<Reservation>,
   ) {}
 
-  async makeReservation(data: CreateReservationDto): Promise<Reservation> {
+  async makeReservation(
+    data: CreateReservationCommandDto,
+  ): Promise<Reservation> {
     return await this.dataSource.transaction(async (manager) => {
       const ticketTier = await manager.findOne(TicketTier, {
         where: { id: data.ticketTierId },

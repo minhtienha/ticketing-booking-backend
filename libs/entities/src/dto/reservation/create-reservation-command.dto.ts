@@ -1,7 +1,10 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-export const CreateReservationSchema = z.object({
+export const CreateReservationCommandSchema = z.object({
+  userId: z
+    .string({ message: 'userId is required' })
+    .uuid('userId must be a valid UUID'),
   eventId: z
     .string({ message: 'eventId is required' })
     .uuid('eventId must be a valid UUID'),
@@ -14,6 +17,6 @@ export const CreateReservationSchema = z.object({
     .min(1, 'quantity must be at least 1'),
 });
 
-export class CreateReservationDto extends createZodDto(
-  CreateReservationSchema,
+export class CreateReservationCommandDto extends createZodDto(
+  CreateReservationCommandSchema,
 ) {}
