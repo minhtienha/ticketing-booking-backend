@@ -19,15 +19,16 @@ import {
 } from '@ticketing/entities';
 
 @Controller('events')
-@UseInterceptors(CacheInterceptor)
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
+  @UseInterceptors(CacheInterceptor)
   @Get()
   async getAll(@Query() query: ListEventsQueryDto) {
     return await this.eventsService.getAllEvents(query);
   }
 
+  @UseInterceptors(CacheInterceptor)
   @Get(':id')
   async getById(@Param('id', ParseUUIDPipe) id: string) {
     return await this.eventsService.getEventById(id);
