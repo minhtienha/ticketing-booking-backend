@@ -28,8 +28,8 @@ export class PaymentService {
     private readonly rabbitClient: ClientProxy,
   ) {
     this.vnpay = new VNPay({
-      tmnCode: '6IU5D5GL',
-      secureSecret: 'RDCWARZAEMLVXOIDDNVJUDWEZJZCEYFQ',
+      tmnCode: process.env.VNPAY_TMN_CODE || '',
+      secureSecret: process.env.VNPAY_SECURE_SECRET || '',
       vnpayHost: 'https://sandbox.vnpayment.vn',
       paymentEndpoint: 'paymentv2/vpcpay.html',
       testMode: true,
