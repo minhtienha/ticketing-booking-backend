@@ -170,4 +170,11 @@ export class OrderService {
 
     return { data, total };
   }
+
+  async getOrderItemsByOrderId(orderId: string): Promise<OrderItem[]> {
+    return await this.orderItemRepository.find({
+      where: { orderId },
+      order: { createdAt: 'ASC' },
+    });
+  }
 }

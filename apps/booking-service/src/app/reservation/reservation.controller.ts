@@ -1,16 +1,31 @@
-import { Controller, Post, Param, Body, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
 import { ReservationService } from './reservation.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { CreateReservationDto, ReservationEventDto } from '@ticketing/entities';
+import { CurrentUser, JwtAuthGuard } from '@ticketing/common';
 
 @Controller('reservations')
 export class ReservationController {
   private readonly logger = new Logger(ReservationController.name);
   constructor(private readonly reservationService: ReservationService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  async makeReservation(@Body() data: CreateReservationDto) {
-    return this.reservationService.makeReservation(data);
+  async makeReservation(
+    @CurrentUser() user: any,
+    @Body() data: CreateReservationDto,
+  ) {
+    return this.reservationService.makeReservation({
+      ...data,
+      userId: user.id,
+    });
   }
 
   @Post(':id/cancel')

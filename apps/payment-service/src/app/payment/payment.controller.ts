@@ -6,14 +6,17 @@ import {
   HttpStatus,
   Get,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CreatePaymentIntentDto, VnPayQueryDto } from '@ticketing/entities';
 import { PaymentService } from './payment.service';
+import { JwtAuthGuard } from '@ticketing/common';
 
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('create-intent')
   async createPaymentIntent(@Body() dto: CreatePaymentIntentDto) {
     return await this.paymentService.createPaymentIntent(dto);

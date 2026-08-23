@@ -10,15 +10,23 @@ import {
   HttpCode,
   HttpStatus,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
-import { CreateTicketTierDto, UpdateTicketTierDto } from '@ticketing/entities';
+import {
+  CreateTicketTierDto,
+  UpdateTicketTierDto,
+  UserRole,
+} from '@ticketing/entities';
 import { TicketTiersService } from './ticket-tiers.service';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { JwtAuthGuard, Roles, RolesGuard } from '@ticketing/common';
 
 @Controller('ticket-tiers')
 export class TicketTiersController {
   constructor(private readonly ticketTiersService: TicketTiersService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateTicketTierDto) {
@@ -37,7 +45,8 @@ export class TicketTiersController {
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return await this.ticketTiersService.findOne(id);
   }
-
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,

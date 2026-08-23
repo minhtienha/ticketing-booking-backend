@@ -9,6 +9,7 @@ import {
   Query,
   ParseUUIDPipe,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CacheInterceptor } from '@nestjs/cache-manager';
@@ -16,7 +17,9 @@ import {
   CreateEventDto,
   UpdateEventDto,
   ListEventsQueryDto,
+  UserRole,
 } from '@ticketing/entities';
+import { JwtAuthGuard, Roles, RolesGuard } from '@ticketing/common';
 
 @Controller('events')
 export class EventsController {
@@ -34,11 +37,15 @@ export class EventsController {
     return await this.eventsService.getEventById(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Post()
   async create(@Body() data: CreateEventDto) {
     return await this.eventsService.createEvent(data);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -47,6 +54,8 @@ export class EventsController {
     return await this.eventsService.updateEvent(id, data);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Delete(':id')
   async delete(@Param('id', ParseUUIDPipe) id: string) {
     return await this.eventsService.deleteEvent(id);

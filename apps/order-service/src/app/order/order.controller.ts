@@ -1,4 +1,4 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, Param, UseGuards } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { OrderService } from './order.service';
 import {
@@ -7,12 +7,25 @@ import {
   PaymentStatusEventDto,
   ReservationExpiredEventDto,
 } from '@ticketing/entities';
+import { CurrentUser, JwtAuthGuard } from '@ticketing/common';
 
-@Controller()
+@Controller('orders')
 export class OrderController {
   private readonly logger = new Logger(OrderController.name);
 
   constructor(private readonly orderService: OrderService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/me')
+  async getOrdersByUserId(@CurrentUser() user: any) {
+    return this.orderService.getOrdersByUserId(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/:id/items')
+  async getOrderItemsByOrderId(@Param('id') orderId: string) {
+    return this.orderService.getOrderItemsByOrderId(orderId);
+  }
 
   @EventPattern('reservation.created')
   async handleReservationCreated(@Payload() data: ReservationCreatedEventDto) {
