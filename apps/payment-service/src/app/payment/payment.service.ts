@@ -7,6 +7,7 @@ import {
   PaymentTransactionStatus,
   CreatePaymentIntentDto,
   VnPayQueryDto,
+  Order,
 } from '@ticketing/entities';
 import { VNPay } from 'vnpay/vnpay';
 import { HashAlgorithm, ProductCode, VnpLocale } from 'vnpay/enums';
@@ -21,6 +22,8 @@ export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
     @Inject('ORDER_SERVICE_CLIENT')
     private readonly rabbitClient: ClientProxy,
   ) {
@@ -37,7 +40,21 @@ export class PaymentService {
 
   async createPaymentIntent(
     data: CreatePaymentIntentDto,
+    userId: string,
   ): Promise<{ paymentId: string; paymentUrl: string }> {
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: data.orderId,
+        userId,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(
+        'Không tìm thấy đơn hàng hoặc đơn hàng không thuộc người dùng hiện tại',
+      );
+    }
+
     const providerTxnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     const now = new Date();

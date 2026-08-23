@@ -8,9 +8,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CreatePaymentIntentDto, VnPayQueryDto } from '@ticketing/entities';
+import {
+  CreatePaymentIntentDto,
+  User,
+  VnPayQueryDto,
+} from '@ticketing/entities';
 import { PaymentService } from './payment.service';
-import { JwtAuthGuard } from '@ticketing/common';
+import { CurrentUser, JwtAuthGuard } from '@ticketing/common';
 
 @Controller('payments')
 export class PaymentController {
@@ -18,8 +22,11 @@ export class PaymentController {
 
   @UseGuards(JwtAuthGuard)
   @Post('create-intent')
-  async createPaymentIntent(@Body() dto: CreatePaymentIntentDto) {
-    return await this.paymentService.createPaymentIntent(dto);
+  async createPaymentIntent(
+    @Body() dto: CreatePaymentIntentDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.paymentService.createPaymentIntent(dto, user.id);
   }
 
   @Get('webhook')

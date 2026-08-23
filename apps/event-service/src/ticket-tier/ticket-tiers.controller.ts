@@ -55,9 +55,11 @@ export class TicketTiersController {
     return await this.ticketTiersService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles([UserRole.ADMIN])
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return await this.ticketTiersService.remove(id);
+    return this.ticketTiersService.remove(id);
   }
 }

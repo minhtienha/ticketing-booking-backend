@@ -5,11 +5,12 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { User } from '@ticketing/entities';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   controllers: [],
-  providers: [JwtStrategy, ConfigService],
-  exports: [JwtStrategy, ConfigService, JwtModule],
+  providers: [JwtStrategy, ConfigService, RolesGuard],
+  exports: [JwtStrategy, ConfigService, JwtModule, RolesGuard],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({

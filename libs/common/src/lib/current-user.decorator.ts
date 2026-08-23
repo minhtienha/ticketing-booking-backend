@@ -3,7 +3,7 @@ import { User } from '@ticketing/entities';
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, context: ExecutionContext): User => {
-    const request = context.switchToHttp().getRequest();
-    return request.currentUser;
+    const request = context.switchToHttp().getRequest<{ user: User }>();
+    return request.user;
   },
 );

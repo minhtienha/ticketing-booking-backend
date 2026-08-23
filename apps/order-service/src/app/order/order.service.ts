@@ -171,10 +171,16 @@ export class OrderService {
     return { data, total };
   }
 
-  async getOrderItemsByOrderId(orderId: string): Promise<OrderItem[]> {
-    return await this.orderItemRepository.find({
-      where: { orderId },
-      order: { createdAt: 'ASC' },
-    });
+  async getOrderItemsByOrderId(
+    orderId: string,
+    userId: string,
+  ): Promise<OrderItem[]> {
+    return this.orderItemRepository
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'order')
+      .where('item.orderId = :orderId', { orderId })
+      .andWhere('order.userId = :userId', { userId })
+      .orderBy('item.createdAt', 'ASC')
+      .getMany();
   }
 }

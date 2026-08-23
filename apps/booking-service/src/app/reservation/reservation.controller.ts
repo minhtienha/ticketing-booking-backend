@@ -5,10 +5,15 @@ import {
   Body,
   Logger,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ReservationService } from './reservation.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { CreateReservationDto, ReservationEventDto } from '@ticketing/entities';
+import {
+  CreateReservationDto,
+  ReservationEventDto,
+  User,
+} from '@ticketing/entities';
 import { CurrentUser, JwtAuthGuard } from '@ticketing/common';
 
 @Controller('reservations')
@@ -19,7 +24,7 @@ export class ReservationController {
   @UseGuards(JwtAuthGuard)
   @Post()
   async makeReservation(
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
     @Body() data: CreateReservationDto,
   ) {
     return this.reservationService.makeReservation({
@@ -28,9 +33,13 @@ export class ReservationController {
     });
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/cancel')
-  async cancelReservation(@Param('id') reservationId: string) {
-    return this.reservationService.cancelReservation(reservationId);
+  async cancelReservation(
+    @Param('id', ParseUUIDPipe) reservationId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.reservationService.cancelReservation(reservationId, user.id);
   }
 
   @EventPattern('order.payment_success')
@@ -48,6 +57,6 @@ export class ReservationController {
       `Nhận tín hiệu thanh toán thất bại. Tiến hành hủy giữ chỗ: ${data.reservationId}`,
     );
 
-    await this.reservationService.cancelReservation(data.reservationId);
+    await this.reservationService.cancelReservationInternal(data.reservationId);
   }
 }

@@ -103,16 +103,34 @@ export class ReservationService {
     });
   }
 
-  async cancelReservation(reservationId: string): Promise<void> {
+  async cancelReservation(
+    reservationId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.cancelReservationByScope(reservationId, userId);
+  }
+
+  async cancelReservationInternal(reservationId: string): Promise<void> {
+    await this.cancelReservationByScope(reservationId);
+  }
+
+  private async cancelReservationByScope(
+    reservationId: string,
+    userId?: string,
+  ): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
+      const where = userId
+        ? 'id = :id AND userId = :userId AND status = :status'
+        : 'id = :id AND status = :status';
+      const parameters = userId
+        ? { id: reservationId, userId, status: ReservationStatus.PENDING }
+        : { id: reservationId, status: ReservationStatus.PENDING };
+
       const updateResult = await manager
         .createQueryBuilder()
         .update(Reservation)
         .set({ status: ReservationStatus.CANCELLED })
-        .where('id = :id AND status = :status', {
-          id: reservationId,
-          status: ReservationStatus.PENDING,
-        })
+        .where(where, parameters)
         .execute();
 
       if (updateResult.affected === 0) {
