@@ -11,9 +11,10 @@ import {
   ReservationStatus,
   CreateReservationDto,
 } from '@ticketing/entities';
-import { DataSource, LessThan } from 'typeorm';
+import { DataSource, LessThan, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ClientProxy } from '@nestjs/microservices';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class ReservationService {
@@ -23,6 +24,8 @@ export class ReservationService {
     private readonly dataSource: DataSource,
     @Inject('ORDER_SERVICE_CLIENT')
     private readonly orderClient: ClientProxy,
+    @InjectRepository(Reservation)
+    private readonly reservationRepository: Repository<Reservation>,
   ) {}
 
   async makeReservation(data: CreateReservationDto): Promise<Reservation> {
@@ -160,43 +163,53 @@ export class ReservationService {
 
   @Cron(CronExpression.EVERY_30_SECONDS)
   async handleExpiredReservations() {
-    await this.dataSource.transaction(async (manager) => {
-      const expiredReservations = await manager.find(Reservation, {
-        where: {
-          status: ReservationStatus.PENDING,
-          expiresAt: LessThan(new Date()),
-        },
-      });
+    const expiredReservations = await this.reservationRepository.find({
+      where: {
+        status: ReservationStatus.PENDING,
+        expiresAt: LessThan(new Date()),
+      },
+      take: 100,
+    });
 
-      for (const reservation of expiredReservations) {
-        // Cập nhật trạng thái EXPIRED
-        const updateResult = await manager
-          .createQueryBuilder()
-          .update(Reservation)
-          .set({ status: ReservationStatus.EXPIRED })
-          .where('id = :id AND status = :status', {
-            id: reservation.id,
-            status: ReservationStatus.PENDING,
-          })
-          .execute();
+    if (expiredReservations.length === 0) return;
 
-        // Nếu update thành công thì hoàn lại vé
-        if (updateResult.affected === 1) {
-          await manager
+    for (const reservation of expiredReservations) {
+      try {
+        await this.dataSource.transaction(async (manager) => {
+          // Cập nhật trạng thái EXPIRED
+          const updateResult = await manager
             .createQueryBuilder()
-            .update(TicketTier)
-            .set({
-              availableQuantity: () =>
-                `availableQuantity + ${reservation.quantity}`,
+            .update(Reservation)
+            .set({ status: ReservationStatus.EXPIRED })
+            .where('id = :id AND status = :status', {
+              id: reservation.id,
+              status: ReservationStatus.PENDING,
             })
-            .where('id = :id', { id: reservation.ticketTierId })
             .execute();
 
-          this.orderClient.emit('reservation.expired', {
-            reservationId: reservation.id,
-          });
-        }
+          // Nếu update thành công thì hoàn lại vé
+          if (updateResult.affected === 1) {
+            await manager
+              .createQueryBuilder()
+              .update(TicketTier)
+              .set({
+                availableQuantity: () =>
+                  `"availableQuantity" + ${reservation.quantity}`,
+              })
+              .where('id = :id', { id: reservation.ticketTierId })
+              .execute();
+
+            this.orderClient.emit('reservation.expired', {
+              reservationId: reservation.id,
+            });
+          }
+        });
+      } catch (error) {
+        this.logger.error(
+          `Lỗi khi xử lý nhả vé cho Reservation ${reservation.id}`,
+          error,
+        );
       }
-    });
+    }
   }
 }
