@@ -1,4 +1,4 @@
-# Hướng dẫn Khởi động Nhanhcho ticket-booking-backend
+# Hướng dẫn Khởi động Nhanh cho ticket-booking-backend
 
 Chào mừng bạn đến với dự án **ticket-booking-backend**! Đây là tài liệu hướng dẫn nhanh giúp bạn thiết lập môi trường phát triển cục bộ và làm quen với các câu lệnh cơ bản.
 
