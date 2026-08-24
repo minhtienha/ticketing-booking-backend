@@ -104,7 +104,7 @@ export class AuthService {
       );
     }
 
-    const user = await this.usersRepository.findOneBy({ id: auth.id });
+    const user = await this.usersRepository.findOneBy({ id: auth.userId });
 
     if (!user || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException(

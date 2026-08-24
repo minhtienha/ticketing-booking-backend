@@ -13,14 +13,26 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
-    // .setTitle('Cats example')
-    // .setDescription('The cats API description')
-    // .setVersion('1.0')
-    // .addTag('cats')
-    .setOpenAPIVersion('3.2.0')
-    .addTag('Animals', 'Everything about animals', undefined, { kind: 'nav' })
-    .addTag('Cats', 'Cat operations', undefined, { parent: 'Animals' })
-    .addTag('Dogs', 'Dog operations', undefined, { parent: 'Animals' })
+    .setTitle('Auth Service API')
+    .setDescription('Authentication and User Management API documentation')
+    .setVersion('1.0')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: 'Nhập JWT access token vào đây',
+      in: 'header',
+    })
+    .addTag(
+      'auth',
+      'Endpoints for User Authentication (Register, Login, Refresh Token)',
+    )
+    .addTag('users', 'Endpoints for User Profile and Account Management')
+    // .setOpenAPIVersion('3.2.0')
+    // .addTag('Animals', 'Everything about animals', undefined, { kind: 'nav' })
+    // .addTag('Cats', 'Cat operations', undefined, { parent: 'Animals' })
+    // .addTag('Dogs', 'Dog operations', undefined, { parent: 'Animals' })
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
