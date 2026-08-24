@@ -19,6 +19,7 @@ async function bootstrap() {
       'API documentation for Ticket Reservations, Expiration, and Order Booking Workflows',
     )
     .setVersion('1.0')
+    .addServer('/api')
     .addBearerAuth(
       {
         type: 'http',

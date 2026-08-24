@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -21,4 +22,35 @@ export const UpdateEventSchema = z.object({
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).optional(),
 });
 
-export class UpdateEventDto extends createZodDto(UpdateEventSchema) {}
+export class UpdateEventDto {
+  @ApiPropertyOptional({
+    description: 'Tên sự kiện',
+    example: 'Music Concert 2026',
+  })
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Mô tả chi tiết về sự kiện',
+    example: 'Đêm nhạc acoustic mùa thu',
+  })
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Thời gian bắt đầu (ISO 8601 string)',
+    example: '2026-08-24T19:00:00.000Z',
+  })
+  startTime?: string | Date;
+
+  @ApiPropertyOptional({
+    description: 'Thời gian kết thúc (ISO 8601 string)',
+    example: '2026-08-24T22:00:00.000Z',
+  })
+  endTime?: string | Date;
+
+  @ApiPropertyOptional({
+    description: 'Trạng thái của sự kiện',
+    enum: ['DRAFT', 'PUBLISHED', 'CANCELLED'],
+    example: 'PUBLISHED',
+  })
+  status?: 'DRAFT' | 'PUBLISHED' | 'CANCELLED';
+}

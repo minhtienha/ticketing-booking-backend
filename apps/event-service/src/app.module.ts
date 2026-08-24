@@ -19,9 +19,9 @@ import { KeyvCacheableMemory } from 'cacheable';
       isGlobal: true,
       useFactory: async () => ({
         stores: [
-          new Keyv({
-            store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
-          }),
+          // new Keyv({
+          //   store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
+          // }),
           new Keyv({
             store: new KeyvRedis('redis://localhost:6379'),
             ttl: 60000,

@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -16,4 +17,13 @@ export const CreateEventSchema = z.object({
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).optional(),
 });
 
-export class CreateEventDto extends createZodDto(CreateEventSchema) {}
+export class CreateEventDto {
+  @ApiProperty({ example: 'Music Concert 2026' })
+  name!: string;
+
+  @ApiProperty({ example: '2026-08-24T20:00:00.000Z' })
+  startDate!: string;
+
+  @ApiProperty({ example: '2026-08-24T23:00:00.000Z' })
+  endDate!: string;
+}
