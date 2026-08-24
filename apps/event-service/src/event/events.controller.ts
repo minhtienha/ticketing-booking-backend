@@ -34,7 +34,7 @@ import {
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
-  // @UseInterceptors(CacheInterceptor)
+  @UseInterceptors(CacheInterceptor)
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sự kiện (kèm phân trang và bộ lọc)' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })

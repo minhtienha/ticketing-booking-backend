@@ -17,17 +17,16 @@ import { KeyvCacheableMemory } from 'cacheable';
     TypeOrmModule.forFeature([Event, TicketTier]),
     CacheModule.registerAsync({
       isGlobal: true,
-      useFactory: async () => ({
-        stores: [
-          // new Keyv({
-          //   store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
-          // }),
-          new Keyv({
-            store: new KeyvRedis('redis://localhost:6379'),
-            ttl: 60000,
-          }),
-        ],
-      }),
+      useFactory: async () => {
+        return {
+          stores: [
+            new Keyv({
+              store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
+            }),
+            new KeyvRedis('redis://localhost:6379'),
+          ],
+        };
+      },
     }),
   ],
   controllers: [],
