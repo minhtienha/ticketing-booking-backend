@@ -8,9 +8,38 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const config = new DocumentBuilder()
+    .setTitle('Booking Service API')
+    .setDescription(
+      'API documentation for Ticket Reservations, Expiration, and Order Booking Workflows',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Dán JWT Access Token vào đây',
+        in: 'header',
+      },
+      'access-token',
+    )
+    .addTag(
+      'reservations',
+      'Operations related to ticket reservations and lifecycle management',
+    )
+    .build();
+
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+
+  SwaggerModule.setup('api', app, documentFactory);
+
   const globalPrefix = 'api';
 
   app.connectMicroservice<MicroserviceOptions>({
