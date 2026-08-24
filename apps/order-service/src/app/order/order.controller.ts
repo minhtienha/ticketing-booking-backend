@@ -16,6 +16,7 @@ import {
   User,
 } from '@ticketing/entities';
 import { CurrentUser, JwtAuthGuard } from '@ticketing/common';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 @Controller('orders')
 export class OrderController {
@@ -31,6 +32,16 @@ export class OrderController {
 
   @UseGuards(JwtAuthGuard)
   @Get('/:id/items')
+  @ApiOperation({ summary: 'Lấy chi tiết đơn hàng theo Order ID' })
+  @ApiParam({ name: 'id', type: 'string', description: 'ID của đơn hàng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trả về thông tin chi tiết đơn hàng và các vé đi kèm.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy đơn hàng.',
+  })
   async getOrderItemsByOrderId(
     @Param('id', ParseUUIDPipe) orderId: string,
     @CurrentUser() user: User,

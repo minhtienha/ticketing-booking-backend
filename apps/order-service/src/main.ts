@@ -8,10 +8,39 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
+
+  const config = new DocumentBuilder()
+    .setTitle('Order Service API')
+    .setDescription(
+      'API documentation for Order Creation, Order Status Tracking, and History',
+    )
+    .setVersion('1.0')
+    .addServer('/api')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Dán JWT Access Token vào đây',
+        in: 'header',
+      },
+      'access-token',
+    )
+    .addTag(
+      'orders',
+      'Endpoints for managing orders, checkout flows, and user order history',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
   app.setGlobalPrefix(globalPrefix);
 
   app.connectMicroservice<MicroserviceOptions>({
