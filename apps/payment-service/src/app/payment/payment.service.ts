@@ -42,6 +42,19 @@ export class PaymentService {
     data: CreatePaymentIntentDto,
     userId: string,
   ): Promise<{ paymentId: string; paymentUrl: string }> {
+    if (data.idempotencyKey) {
+      const existingPayment = await this.paymentRepository.findOne({
+        where: { idempotencyKey: data.idempotencyKey },
+      });
+
+      if (existingPayment) {
+        this.logger.log(
+          `[Idempotency] Trả về URL cũ cho key: ${data.idempotencyKey}`,
+        );
+        return this.buildExistingVnpayUrl(existingPayment);
+      }
+    }
+
     const order = await this.orderRepository.findOne({
       where: {
         id: data.orderId,
@@ -90,6 +103,23 @@ export class PaymentService {
     return {
       paymentId: savedPayment.id,
       paymentUrl: paymentUrl,
+    };
+  }
+
+  private buildExistingVnpayUrl(existingPayment: any) {
+    const existingPaymentUrl = this.vnpay.buildPaymentUrl({
+      vnp_Amount: Number(existingPayment.amount),
+      vnp_IpAddr: '127.0.0.1',
+      vnp_TxnRef: existingPayment.providerTransactionId,
+      vnp_OrderInfo: `Thanh toan don hang ${existingPayment.orderId}`,
+      vnp_OrderType: ProductCode.Other,
+      vnp_ReturnUrl: 'http://localhost:3005/api/payments/vnpay-return',
+      vnp_Locale: VnpLocale.VN,
+    });
+
+    return {
+      paymentId: existingPayment.id,
+      paymentUrl: existingPaymentUrl,
     };
   }
 
