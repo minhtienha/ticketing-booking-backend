@@ -92,6 +92,84 @@ docker-compose -f .development/docker-compose.yml down
 
 ---
 
+### 🏗️ 4. Architecture
+
+Hệ thống được tổ chức theo mô hình **Nx Monorepo** và kiến trúc **microservices**:
+
+```mermaid
+flowchart LR
+	Client[Client / k6]
+	Gateway[API Gateway\n:3000]
+	Auth[Auth Service\n:3001]
+	Event[Event Service\n:3002]
+	Booking[Booking Service\n:3003]
+	Order[Order Service\n:3004]
+	Payment[Payment Service\n:3005]
+	Notification[Notification Service\n:3006]
+	PostgreSQL[(PostgreSQL\n:5432)]
+	Redis[(Redis\n:6379)]
+	RabbitMQ[RabbitMQ\n:5672 / 15672]
+
+	Client --> Gateway
+	Client --> Auth
+	Client --> Event
+	Client --> Booking
+	Client --> Payment
+
+	Auth --> PostgreSQL
+	Event --> PostgreSQL
+	Booking --> PostgreSQL
+	Order --> PostgreSQL
+	Payment --> PostgreSQL
+
+	Event --> Redis
+	Booking <--> RabbitMQ
+	Order <--> RabbitMQ
+	Payment --> RabbitMQ
+	Notification --> RabbitMQ
+```
+
+#### Luồng đặt vé
+
+```mermaid
+sequenceDiagram
+	participant Client
+	participant Booking as Booking Service
+	participant DB as PostgreSQL
+	participant MQ as RabbitMQ
+	participant Order as Order Service
+	participant Payment as Payment Service
+
+	Client->>Booking: POST /api/reservations
+	Booking->>DB: Transaction + atomic giảm availableQuantity
+	DB-->>Booking: Cập nhật tồn kho thành công
+	Booking->>DB: Tạo Reservation PENDING
+	Booking->>MQ: reservation.created
+	MQ->>Order: Tạo Order PENDING
+	Client->>Payment: Tạo payment intent
+	Payment->>MQ: payment.succeeded / payment.failed
+	MQ->>Order: Cập nhật trạng thái Order
+	Order->>MQ: order.payment_success / order.payment_failed
+	MQ->>Booking: CONFIRMED hoặc CANCELLED
+```
+
+Các thành phần chính:
+
+- **API Gateway:** cổng vào HTTP của hệ thống; hiện tại đang là service mẫu.
+- **Auth Service:** đăng ký, đăng nhập và phát hành JWT.
+- **Event Service:** quản lý event, ticket tier và tồn kho cấu hình.
+- **Booking Service:** giữ vé, tạo reservation, xử lý hủy và tự động expire.
+- **Order Service:** tạo order, cập nhật trạng thái thanh toán và phát hành ticket.
+- **Payment Service:** tạo payment intent và xử lý callback VNPay.
+- **Notification Service:** service dành cho các luồng thông báo qua message broker.
+- **PostgreSQL:** lưu trữ dữ liệu nghiệp vụ và xử lý transaction tồn kho.
+- **RabbitMQ:** giao tiếp bất đồng bộ giữa Booking, Order, Payment và Notification.
+- **Redis:** cache dữ liệu đọc, hiện được sử dụng trong Event Service.
+- **libs/common:** module dùng chung cho database, JWT, guards và decorators.
+- **libs/entities:** entity TypeORM cùng Zod Schema/DTO dùng chung.
+
+---
+
 ### 📂 4. Cấu trúc thư mục Monorepo
 
 - `/apps/auth-service`: Dịch vụ quản lý xác thực và người dùng.
