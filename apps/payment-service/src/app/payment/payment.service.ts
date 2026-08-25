@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
@@ -8,6 +14,7 @@ import {
   CreatePaymentIntentDto,
   VnPayQueryDto,
   Order,
+  ReservationStatus,
 } from '@ticketing/entities';
 import { VNPay } from 'vnpay/vnpay';
 import { HashAlgorithm, ProductCode, VnpLocale } from 'vnpay/enums';
@@ -60,11 +67,26 @@ export class PaymentService {
         id: data.orderId,
         userId,
       },
+      relations: {
+        reservation: true,
+      },
     });
 
     if (!order) {
       throw new NotFoundException(
-        'Không tìm thấy đơn hàng hoặc đơn hàng không thuộc người dùng hiện tại',
+        'Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về người dùng hiện tại.',
+      );
+    }
+
+    if (!order.reservation) {
+      throw new NotFoundException(
+        'Không tìm thấy thông tin giữ vé của đơn hàng này.',
+      );
+    }
+
+    if (order.reservation.status !== ReservationStatus.PENDING) {
+      throw new BadRequestException(
+        `Không thể tạo giao dịch thanh toán do phiên giữ vé đang ở trạng thái "${order.reservation.status}".`,
       );
     }
 

@@ -1,5 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { DefaultEntity } from '../common/default.entity';
+import { Reservation } from '../reservation';
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
@@ -20,6 +28,10 @@ export class Order extends DefaultEntity {
   @Index()
   @Column({ type: 'uuid' })
   reservationId!: string;
+
+  @OneToOne(() => Reservation)
+  @JoinColumn({ name: 'reservationId' })
+  reservation!: Reservation;
 
   @Column({
     type: 'decimal',
