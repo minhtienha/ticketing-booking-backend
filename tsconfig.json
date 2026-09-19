@@ -29,6 +29,9 @@
     },
     {
       "path": "./libs/entities"
+    },
+    {
+      "path": "./apps/frontend"
     }
   ],
   "compilerOptions": {}

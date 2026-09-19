@@ -111,8 +111,9 @@ export class AuthService {
         'Người dùng không tồn tại hoặc đã bị khóa',
       );
     }
+    await this.authRepository.delete(auth.id);
 
-    return this.generateTokens(user.id, user.email);
+    return await this.generateTokens(user.id, user.email);
   }
 
   async logout(refreshToken: string) {

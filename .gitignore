@@ -61,3 +61,4 @@ apps/*/dist
 .github
 .gemini
 .opencode
+vite.config.*.timestamp*

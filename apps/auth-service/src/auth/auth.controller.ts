@@ -1,11 +1,17 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
-  LoginAuthDto,
-  RegisterAuthDto,
-  RefreshTokenDto,
-} from '@ticketing/entities';
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { LoginAuthDto, RegisterAuthDto } from '@ticketing/entities';
 import { AuthService } from './auth.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -28,8 +34,20 @@ export class AuthController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Email hoặc mật khẩu không chính xác.',
   })
-  login(@Body() data: LoginAuthDto) {
-    return this.authService.login(data);
+  async login(
+    @Body() body: LoginAuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.login(body);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return { accessToken };
   }
 
   @Post('/register')
@@ -47,7 +65,7 @@ export class AuthController {
     status: HttpStatus.CONFLICT,
     description: 'Email đã tồn tại trong hệ thống.',
   })
-  register(@Body() data: RegisterAuthDto) {
+  async register(@Body() data: RegisterAuthDto) {
     return this.authService.register(data);
   }
 
@@ -58,7 +76,44 @@ export class AuthController {
     status: 401,
     description: 'Refresh token không hợp lệ hoặc đã hết hạn',
   })
-  refreshToken(@Body() data: RefreshTokenDto) {
-    return this.authService.refreshToken(data.refreshToken);
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies['refreshToken'];
+    if (!refreshToken) {
+      throw new UnauthorizedException('Không tìm thấy Refresh Token');
+    }
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.authService.refreshToken(refreshToken);
+
+    if (newRefreshToken) {
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    return { accessToken };
+  }
+
+  @Post('/logout')
+  @ApiOperation({ summary: 'Đăng xuất tài khoản' })
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies['refreshToken'];
+
+    if (refreshToken) {
+      await this.authService.logout(refreshToken);
+    }
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+    });
+
+    return { message: 'Đăng xuất thành công' };
   }
 }
