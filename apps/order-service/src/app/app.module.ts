@@ -10,6 +10,7 @@ import {
   Ticket,
   TicketTier,
   Event,
+  Reservation,
 } from '@ticketing/entities';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -18,7 +19,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     CommonModule,
     OrderModule,
     TicketModule,
-    TypeOrmModule.forFeature([Order, OrderItem, Ticket, TicketTier, Event]),
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      Ticket,
+      TicketTier,
+      Event,
+      Reservation,
+    ]),
   ],
   controllers: [AppController],
   providers: [AppService],

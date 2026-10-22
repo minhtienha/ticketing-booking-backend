@@ -145,7 +145,9 @@ export class PaymentService {
     };
   }
 
-  async handleWebhook(query: VnPayQueryDto): Promise<void> {
+  async handleWebhook(
+    query: VnPayQueryDto,
+  ): Promise<{ RspCode: string; Message: string }> {
     const verify: VerifyIpnCall = this.vnpay.verifyIpnCall(query);
 
     if (!verify.isVerified) {
@@ -153,40 +155,57 @@ export class PaymentService {
       throw new NotFoundException('Xác thực webhook thất bại');
     }
 
-    const payment = await this.paymentRepository.findOne({
+    const isSuccess = verify.isSuccess;
+    const newStatus = isSuccess
+      ? PaymentTransactionStatus.SUCCESS
+      : PaymentTransactionStatus.FAILED;
+
+    // 1. Chỉ update nếu status ĐANG LÀ PENDING
+    const updateResult = await this.paymentRepository
+      .createQueryBuilder()
+      .update(Payment)
+      .set({ status: newStatus })
+      .where('providerTransactionId = :txnRef AND status = :pendingStatus', {
+        txnRef: query.vnp_TxnRef,
+        pendingStatus: PaymentTransactionStatus.PENDING,
+      })
+      .execute();
+
+    // 2. Nếu affected === 0 => nghĩa là không có bản ghi nào hoặc đã được xử lý trước đó
+    if (updateResult.affected === 0) {
+      const existingPayment = await this.paymentRepository.findOne({
+        where: { providerTransactionId: query.vnp_TxnRef },
+      });
+
+      if (!existingPayment) {
+        this.logger.error('Không tìm thấy bản ghi giao dịch');
+        throw new NotFoundException('Không tìm thấy bản ghi giao dịch');
+      }
+
+      this.logger.warn(
+        `Giao dịch ${existingPayment.id} đã được xử lý trước đó.`,
+      );
+      return { RspCode: '02', Message: 'Order already confirmed' };
+    }
+
+    const payment = await this.paymentRepository.findOneOrFail({
       where: { providerTransactionId: query.vnp_TxnRef },
     });
 
-    if (!payment) {
-      this.logger.error('Không tìm thấy bản ghi giao dịch');
-      throw new NotFoundException('Không tìm thấy bản ghi giao dịch');
-    }
-
-    if (payment.status === PaymentTransactionStatus.SUCCESS) {
-      this.logger.warn(`Giao dịch ${payment.id} đã được ghi nhận trước đó`);
-      return;
-    }
-
-    const isSuccess = verify.isSuccess;
-
-    payment.status = isSuccess
-      ? PaymentTransactionStatus.SUCCESS
-      : PaymentTransactionStatus.FAILED;
-    const updatedPayment = await this.paymentRepository.save(payment);
-
     if (isSuccess) {
       this.rabbitClient.emit('payment.succeeded', {
-        paymentId: updatedPayment.id,
-        orderId: updatedPayment.orderId,
-        amount: updatedPayment.amount,
+        paymentId: payment.id,
+        orderId: payment.orderId,
+        amount: payment.amount,
       });
-      this.logger.log(`Thanh toán thành công đơn: ${updatedPayment.orderId}`);
+      this.logger.log(`Thanh toán thành công đơn: ${payment.orderId}`);
     } else {
       this.rabbitClient.emit('payment.failed', {
-        paymentId: updatedPayment.id,
-        orderId: updatedPayment.orderId,
+        paymentId: payment.id,
+        orderId: payment.orderId,
       });
-      this.logger.log(`Thanh toán thất bại đơn: ${updatedPayment.orderId}`);
+      this.logger.log(`Thanh toán thất bại đơn: ${payment.orderId}`);
     }
+    return { RspCode: '00', Message: 'Confirm Success' };
   }
 }

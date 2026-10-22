@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { Order, Payment } from '@ticketing/entities';
+import { Order, Payment, Reservation } from '@ticketing/entities';
 import { CommonModule } from '@ticketing/common';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
@@ -9,7 +9,7 @@ import { PaymentService } from './payment.service';
 @Module({
   imports: [
     CommonModule,
-    TypeOrmModule.forFeature([Payment, Order]),
+    TypeOrmModule.forFeature([Payment, Order, Reservation]),
     ClientsModule.register([
       {
         name: 'ORDER_SERVICE_CLIENT',

@@ -32,8 +32,7 @@ export class PaymentController {
   @Get('webhook')
   @HttpCode(HttpStatus.OK)
   async handleWebhook(@Query() query: VnPayQueryDto) {
-    await this.paymentService.handleWebhook(query);
-    return { RspCode: '00', Message: 'Confirm Success' };
+    return await this.paymentService.handleWebhook(query);
   }
 
   @Get('vnpay-return')

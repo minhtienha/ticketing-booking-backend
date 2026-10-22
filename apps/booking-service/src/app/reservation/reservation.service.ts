@@ -26,61 +26,67 @@ export class ReservationService {
     private readonly orderClient: ClientProxy,
     @InjectRepository(Reservation)
     private readonly reservationRepository: Repository<Reservation>,
+    @InjectRepository(TicketTier)
+    private readonly ticketTierRepository: Repository<TicketTier>,
   ) {}
 
   async makeReservation(
     data: CreateReservationCommandDto,
   ): Promise<Reservation> {
-    return await this.dataSource.transaction(async (manager) => {
-      const ticketTier = await manager.findOne(TicketTier, {
-        where: { id: data.ticketTierId },
-      });
-
-      if (!ticketTier) {
-        throw new BadRequestException('Hạng vé không tồn tại');
-      }
-
-      const updateResult = await manager
-        .createQueryBuilder()
-        .update(TicketTier)
-        .set({
-          availableQuantity: () => `availableQuantity - ${data.quantity}`,
-        })
-        .where('id = :id AND availableQuantity >= :quantity', {
-          id: data.ticketTierId,
-          quantity: data.quantity,
-        })
-        .execute();
-
-      if (updateResult.affected === 0) {
-        throw new BadRequestException(
-          'Hạng vé đã hết hoặc không đủ số lượng yêu cầu',
-        );
-      }
-
-      const reservation = manager.create(Reservation, {
-        ...data,
-        status: ReservationStatus.PENDING,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      });
-
-      const savedReservation = await manager.save(reservation);
-
-      const totalAmount = ticketTier.price * data.quantity;
-
-      await this.orderClient.emit('reservation.created', {
-        userId: savedReservation.userId,
-        reservationId: savedReservation.id,
-        totalAmount: totalAmount,
-        idempotencyKey: `order_res_${savedReservation.id}`,
-        ticketTierId: savedReservation.ticketTierId,
-        quantity: savedReservation.quantity,
-        unitPrice: ticketTier.price,
-        totalPrice: totalAmount,
-      });
-
-      return savedReservation;
+    const ticketTier = await this.ticketTierRepository.findOne({
+      where: { id: data.ticketTierId },
     });
+
+    if (!ticketTier) {
+      throw new BadRequestException('Hạng vé không tồn tại');
+    }
+
+    // 2. Thực hiện DB Transaction nhẹ gọn
+    const savedReservation = await this.dataSource.transaction(
+      async (manager) => {
+        const updateResult = await manager
+          .createQueryBuilder()
+          .update(TicketTier)
+          .set({
+            availableQuantity: () => `availableQuantity - ${data.quantity}`,
+          })
+          .where('id = :id AND availableQuantity >= :quantity', {
+            id: data.ticketTierId,
+            quantity: data.quantity,
+          })
+          .execute();
+
+        if (updateResult.affected === 0) {
+          throw new BadRequestException(
+            'Hạng vé đã hết hoặc không đủ số lượng yêu cầu',
+          );
+        }
+
+        // Tạo và lưu Reservation
+        const reservation = manager.create(Reservation, {
+          ...data,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        });
+
+        return await manager.save(reservation);
+      },
+    );
+    // 3. Tính toán và Emit Event sau khi DB Transaction đã COMMIT thành công
+    const totalAmount = ticketTier.price * data.quantity;
+
+    await this.orderClient.emit('reservation.created', {
+      userId: savedReservation.userId,
+      reservationId: savedReservation.id,
+      totalAmount: totalAmount,
+      idempotencyKey: `order_res_${savedReservation.id}`,
+      ticketTierId: savedReservation.ticketTierId,
+      quantity: savedReservation.quantity,
+      unitPrice: ticketTier.price,
+      totalPrice: totalAmount,
+    });
+
+    return savedReservation;
   }
 
   async confirmReservation(reservationId: string): Promise<Reservation> {
