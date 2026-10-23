@@ -1,16 +1,24 @@
+version: '3.8'
+
+x-common-config: &common-app
+  env_file:
+    - ../.env
+  networks:
+    - ticketing
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: '123'
-      POSTGRES_DB: pb19
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U admin -d pb19']
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,8 +38,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     environment:
-      RABBITMQ_DEFAULT_USER: ticketing
-      RABBITMQ_DEFAULT_PASS: ticketing
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
       - '5672:5672'
       - '15672:15672'
@@ -43,13 +51,12 @@ services:
     networks: [ticketing]
 
   auth-service:
+    <<: *common-app
     build:
       context: ..
       dockerfile: Dockerfile
       args:
         APP_NAME: auth-service
-    env_file:
-      - ../.env
     environment: &service-env
       PORT: 3000
       DATABASE_HOST: postgres
@@ -57,12 +64,12 @@ services:
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_NAME: ${POSTGRES_DB}
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL}
-      RABBITMQ_URL: ${RABBITMQ_URL}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
       JWT_SECRET: ${JWT_SECRET}
-      VNP_TMN_CODE: ${VNP_TMN_CODE}
-      VNP_SECURE_SECRET: ${VNP_SECURE_SECRET}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE}
+      VNPAY_SECURE_SECRET: ${VNPAY_SECURE_SECRET}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -72,6 +79,7 @@ services:
     networks: [ticketing]
 
   event-service:
+    <<: *common-app
     build:
       context: ..
       dockerfile: Dockerfile
@@ -88,6 +96,7 @@ services:
     networks: [ticketing]
 
   booking-service:
+    <<: *common-app
     build:
       context: ..
       dockerfile: Dockerfile
@@ -104,6 +113,7 @@ services:
     networks: [ticketing]
 
   order-service:
+    <<: *common-app
     build:
       context: ..
       dockerfile: Dockerfile
@@ -120,6 +130,7 @@ services:
     networks: [ticketing]
 
   payment-service:
+    <<: *common-app
     build:
       context: ..
       dockerfile: Dockerfile
