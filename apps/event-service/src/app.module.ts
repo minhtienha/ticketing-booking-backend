@@ -23,7 +23,8 @@ import { KeyvCacheableMemory } from 'cacheable';
             new Keyv({
               store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }),
             }),
-            new KeyvRedis('redis://localhost:6379'),
+            // new KeyvRedis('redis://localhost:6379'),
+            new KeyvRedis(process.env.REDIS_URL || 'redis://localhost:6379'),
           ],
         };
       },
