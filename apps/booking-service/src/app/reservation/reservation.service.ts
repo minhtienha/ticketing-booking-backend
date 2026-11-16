@@ -15,10 +15,13 @@ import { DataSource, LessThan, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
 
 @Injectable()
 export class ReservationService {
   private readonly logger = new Logger(ReservationService.name);
+  private readonly HOLD_TTL_SECONDS = 15;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -28,6 +31,8 @@ export class ReservationService {
     private readonly reservationRepository: Repository<Reservation>,
     @InjectRepository(TicketTier)
     private readonly ticketTierRepository: Repository<TicketTier>,
+    @Inject(REDIS_CLIENT)
+    private readonly redisClient: Redis,
   ) {}
 
   async makeReservation(
@@ -41,7 +46,7 @@ export class ReservationService {
       throw new BadRequestException('Hạng vé không tồn tại');
     }
 
-    // 2. Thực hiện DB Transaction nhẹ gọn
+    // 1. Giữ vé bằng DB Transaction
     const savedReservation = await this.dataSource.transaction(
       async (manager) => {
         const updateResult = await manager
@@ -72,7 +77,13 @@ export class ReservationService {
         return await manager.save(reservation);
       },
     );
-    // 3. Tính toán và Emit Event sau khi DB Transaction đã COMMIT thành công
+
+    // 2. Đặt TTL trên Redis với prefix dễ quản lý
+    // Key format: reservation:hold:{reservationId}
+    const redisKey = `reservation:hold:${savedReservation.id}`;
+    await this.redisClient.set(redisKey, '1', 'EX', this.HOLD_TTL_SECONDS);
+
+    // 3. Emit event tạo đơn hàng sang order-service
     const totalAmount = ticketTier.price * data.quantity;
 
     await this.orderClient.emit('reservation.created', {
@@ -90,7 +101,7 @@ export class ReservationService {
   }
 
   async confirmReservation(reservationId: string): Promise<Reservation> {
-    return await this.dataSource.transaction(async (manager) => {
+    const updated = await this.dataSource.transaction(async (manager) => {
       const reservation = await manager.findOne(Reservation, {
         where: { id: reservationId },
       });
@@ -107,11 +118,59 @@ export class ReservationService {
       }
 
       reservation.status = ReservationStatus.CONFIRMED;
-      const updatedReservation = await manager.save(reservation);
-
-      this.logger.log(`Hoàn tất chốt vé cho Reservation: ${reservationId}`);
-      return updatedReservation;
+      return await manager.save(reservation);
     });
+
+    // XÓA KEY TRÊN REDIS: để không bị bắn expired event nữa
+    await this.redisClient.del(`reservation:hold:${reservationId}`);
+
+    return updated;
+  }
+
+  async processExpiredReservation(reservationId: string): Promise<void> {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        // Cập nhật trạng thái EXPIRED
+        const updateResult = await manager
+          .createQueryBuilder()
+          .update(Reservation)
+          .set({ status: ReservationStatus.EXPIRED })
+          .where('id = :id AND status = :status', {
+            id: reservationId,
+            status: ReservationStatus.PENDING,
+          })
+          .execute();
+
+        if (updateResult.affected === 1) {
+          const reservation = await manager.findOne(Reservation, {
+            where: { id: reservationId },
+          });
+          if (reservation) {
+            await manager
+              .createQueryBuilder()
+              .update(TicketTier)
+              .set({
+                availableQuantity: () =>
+                  `"availableQuantity" + ${reservation.quantity}`,
+              })
+              .where('id = :id', { id: reservation.ticketTierId })
+              .execute();
+            this.logger.log(
+              `[Redis Expiration] Đã nhả vé cho Reservation: ${reservationId}`,
+            );
+            // Bắn event để order-service hủy đơn
+            this.orderClient.emit('reservation.expired', {
+              reservationId: reservation.id,
+            });
+          }
+        }
+      });
+    } catch (error) {
+      this.logger.error(
+        `Lỗi khi xử lý hết hạn cho reservation ${reservationId}`,
+        error,
+      );
+    }
   }
 
   async cancelReservation(
@@ -169,7 +228,7 @@ export class ReservationService {
     });
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleExpiredReservations() {
     const expiredReservations = await this.reservationRepository.find({
       where: {

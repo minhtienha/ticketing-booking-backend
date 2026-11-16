@@ -4,8 +4,14 @@ import { AppService } from './app.service';
 import { CommonModule } from '@ticketing/common';
 import { ReservationModule } from './reservation/reservation.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from './redis/redis.module';
 @Module({
-  imports: [CommonModule, ReservationModule, ScheduleModule.forRoot()],
+  imports: [
+    CommonModule,
+    RedisModule,
+    ReservationModule,
+    ScheduleModule.forRoot(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

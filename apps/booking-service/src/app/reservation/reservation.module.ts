@@ -9,6 +9,7 @@ import { Reservation, TicketTier, Event } from '@ticketing/entities';
 import { ReservationController } from './reservation.controller';
 import { ReservationService } from './reservation.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { RedisExpiredListener } from './redis-expired.listener';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     ]),
   ],
   controllers: [ReservationController],
-  providers: [ReservationService],
+  providers: [ReservationService, RedisExpiredListener],
   exports: [ReservationService],
 })
 export class ReservationModule {}
